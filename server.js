@@ -7,11 +7,20 @@ const fs = require("fs");
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
-// ⚠️ YAHAN APNA TOKEN DAAL
+// ⚠️ TOKEN (better: env variable use kar)
 const TOKEN = "Bearer KUHN-RSOG-QZBV-4R0P";
 
+// STATIC FILES
 app.use(express.static("public"));
 
+
+// ✅ ROOT ROUTE (YAHAN hona chahiye — bahar)
+app.get("/", (req, res) => {
+  res.send("🚀 Server is running");
+});
+
+
+// ✅ UPLOAD ROUTE
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -20,7 +29,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     console.log("File received:", req.file.originalname);
 
-    // STEP 1: Get server
+    // STEP 1
     const srv = await fetch("https://filemirage.com/api/servers", {
       headers: { Authorization: TOKEN }
     });
@@ -34,9 +43,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     const server = srvData.data.server;
     const uploadId = srvData.data.upload_id;
 
-    console.log("Server:", server);
-
-    // STEP 2: Upload file
+    // STEP 2
     const form = new FormData();
     form.append("file", fs.createReadStream(req.file.path));
     form.append("upload_id", uploadId);
@@ -46,26 +53,19 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     const uploadRes = await fetch(server + "/upload.php", {
       method: "POST",
-      headers: {
-        Authorization: TOKEN
-      },
+      headers: { Authorization: TOKEN },
       body: form
     });
 
     const result = await uploadRes.json();
 
-    console.log("Upload result:", result);
-
-    // temp file delete
     fs.unlinkSync(req.file.path);
 
     if (!result.success) {
       return res.status(500).send("Upload failed");
     }
 
-    res.json({
-      url: result.data.url
-    });
+    res.json({ url: result.data.url });
 
   } catch (err) {
     console.error("ERROR:", err);
@@ -73,6 +73,10 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("🚀 Server running at http://localhost:3000");
+
+// ⚠️ PORT FIX (Railway ke liye)
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
 });
